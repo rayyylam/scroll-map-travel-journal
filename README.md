@@ -1,4 +1,4 @@
-# 滚动地图旅行手账 · travel-journal
+# 滚动地图旅行电子手账 · scroll-map-travel-journal
 
 **制作：阿蓝蓝**
 
@@ -8,9 +8,9 @@
 
 ## 安装
 
-下载 [travel-journal.zip](https://github.com/rayyylam/travel-journal/releases/latest/download/travel-journal.zip)，交给支持 Skill 与文件读写的 AI 工具安装。不同工具的导入方式以各自支持情况为准。
+下载 [scroll-map-travel-journal.zip](https://github.com/rayyylam/scroll-map-travel-journal/releases/latest/download/scroll-map-travel-journal.zip)，交给支持 Skill 与文件读写的 AI 工具安装。不同工具的导入方式以各自支持情况为准。
 
-手动安装到 Codex：解压后把 `travel-journal` 文件夹放到 `~/.codex/skills/`，确认其中直接包含 `SKILL.md`，再重新打开会话。自定义 CODEX_HOME 时使用该目录下的 skills 文件夹。
+手动安装到 Codex：解压后把 `scroll-map-travel-journal` 文件夹放到 `~/.codex/skills/`，确认其中直接包含 `SKILL.md`，再重新打开会话。自定义 CODEX_HOME 时使用该目录下的 skills 文件夹。
 
 也可以下载或克隆本仓库，把仓库目录作为 Skill 文件夹使用。
 
@@ -18,7 +18,7 @@
 
 把下面这句话和行程发给 AI：
 
-> 请使用 $travel-journal，按我的行程制作滚动地图旅行手账。请先推荐主要地图点和章节安排，再完成地点插画。照片和笔记我之后自己补。
+> 请使用 $scroll-map-travel-journal，按我的行程制作滚动地图旅行手账。请先推荐主要地图点和章节安排，再完成地点插画。照片和笔记我之后自己补。
 
 例如：第一天从 A 城乘火车到 B 城，第二天游览 B 城，第三天乘车到 C 镇，第四天返程。请把地点替换为你的真实目的地，并提供旅行日期。
 

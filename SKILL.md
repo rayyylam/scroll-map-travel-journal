@@ -1,5 +1,5 @@
 ---
-name: travel-journal
+name: scroll-map-travel-journal
 metadata:
   author: 阿蓝蓝
 description: 根据用户自己的旅行行程制作或修改滚动地图电子手账。左侧地图随阅读推进路线与镜头，右侧可编辑文字、照片和便签，支持地点插画生成、展开全图及本地保存。用户提到滑动地图旅行手账、滚动旅行地图、旅行回忆网页，或要把行程做成这种互动网页时使用。

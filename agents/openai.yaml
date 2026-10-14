@@ -1,4 +1,4 @@
 interface:
   display_name: "滚动地图旅行电子手账"
   short_description: "根据自己的行程制作滚动地图与可编辑手账，包含地点插画和完整网页交付"
-  default_prompt: "请使用 $travel-journal，根据我的旅行行程制作一份有精美地点插画的滚动地图电子手账。"
+  default_prompt: "请使用 $scroll-map-travel-journal，根据我的旅行行程制作一份有精美地点插画的滚动地图电子手账。"
