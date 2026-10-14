@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<!-- 滚动地图旅行电子手账 · 通用模板；滚动地图灵感：Tom Miller / Creative Ocean，原作见 licenses/第三方说明.md -->
+<html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的电子旅行手帐 · 示例模板</title>
+<style>
+@font-face{font-family:"ZhaiZaiJia";src:url("fonts/ZhaiZaiJiaZiDongBi-2.ttf") format("truetype");font-display:swap}
+
+:root{
+  --ink:#071522;
+  --ink-soft:#33505f;
+  --paper:#F8F1E5;
+  --paper-deep:#eee2cd;
+  --coral:#DF8F68;
+  --coral-deep:#c9744c;
+  --lagoon:#006D77;
+  --sea:#0a4854;
+  --sea-deep:#071522;
+  --sky:#84B8DF;
+  --foam:#bfe8e2;
+  --sand:#F8F1E5;
+  --gold:#84B8DF;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{overscroll-behavior:none}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--paper);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ layout ============ */
+#journey{position:relative;width:100%;display:flex}
+.map-wrap{
+  position:sticky;left:0;top:0;
+  width:50%;height:100vh;flex-shrink:0;
+  z-index:10;
+  overflow:hidden;
+  background:var(--sea-deep);
+}
+.map-wrap svg.map{display:block;width:100%;height:100%}
+.sample-link{display:block;margin-top:14px;color:var(--ink);font-size:12px;text-decoration:none;pointer-events:auto;letter-spacing:.04em}
+.sample-link span{margin-left:8px;font-size:10px;opacity:.65;border-bottom:1px solid currentColor}
+.map-caption{position:absolute;left:24px;bottom:26px;pointer-events:none;color:#173b43;text-shadow:0 1px 6px #c5e9e6;display:flex;flex-direction:column;gap:5px;z-index:20}
+.map-caption .map-eyebrow{font-size:9px;letter-spacing:.2em}
+.map-caption strong{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:24px}
+.map-caption>span:not(.map-eyebrow){font-size:11px}
+.map-caption small{font-size:9px;opacity:.65;margin-top:4px}
+.map-wrap.is-expanded{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-width:none!important;transform:none!important;z-index:1000}
+body.map-open .expand-map{display:none}
+:focus-visible{outline:2px solid #173b43;outline-offset:5px}
+#d1,#d2,#d3,#d4{scroll-margin-top:60px}
+.map-nav{display:flex;gap:7px;margin-top:15px;pointer-events:auto}
+.map-nav a{color:#28585a;text-decoration:none;font-size:11px;padding:6px 10px;border:1px solid #447f7b40;border-radius:20px;background:#e7f2de66;text-shadow:none}
+.map-nav a:hover,.map-nav a[aria-current="true"]{background:#f8f1e5;color:#163d40}
+.map-site-label{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;fill:#244f51;stroke:#d9ece3;stroke-width:2}
+.info{
+  position:relative;
+  margin-left:0;
+  width:50%;
+  padding:0 6% 40vh;
+}
+
+/* ============ map decorations ============ */
+.map-title{
+  position:absolute;left:22px;top:20px;z-index:20;
+  color:var(--ink);pointer-events:none;
+  text-shadow:0 1px 0 rgba(248,241,229,.9),0 2px 10px rgba(0,70,75,.24);
+}
+.map-title .en{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:1.3rem;letter-spacing:.28em}
+.map-title .cn{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;opacity:.85;margin-top:4px;letter-spacing:.1em}
+.map-compass{position:absolute;right:18px;top:18px;z-index:20;width:44px;height:44px;opacity:.75;pointer-events:none}
+.map-compass circle{stroke:var(--ink)}
+.map-compass path{fill:var(--coral-deep)}
+.map-compass text{fill:var(--ink)}
+
+/* expand / close */
+.expand-map{
+  position:absolute;right:16px;bottom:16px;z-index:30;
+  border:none;cursor:pointer;
+  background:var(--paper);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:.85rem;letter-spacing:.12em;
+  border-radius:999px;padding:10px 18px;
+  box-shadow:0 6px 20px rgba(7,21,34,.45);
+  display:flex;align-items:center;gap:8px;
+  transition:transform .25s ease, background .25s ease;
+}
+.expand-map:hover{transform:translateY(-2px);background:#fff}
+.expand-map svg{width:14px;height:14px;fill:var(--lagoon)}
+.close-map{
+  position:fixed;right:18px;bottom:18px;z-index:9999;
+  width:52px;height:52px;border-radius:50%;
+  border:none;cursor:pointer;opacity:0;visibility:hidden;
+  background:var(--coral);box-shadow:0 8px 24px rgba(7,21,34,.5);
+  display:flex;align-items:center;justify-content:center;
+}
+.close-map svg{width:20px;height:20px;fill:#fff}
+
+/* ============ content ============ */
+.day{min-height:92vh;display:flex;flex-direction:column;justify-content:center;padding:10vh 0}
+/* chapters without photos: content-driven height, tighter gaps */
+#d8,#d9,#d10{min-height:auto;padding-top:7vh;padding-bottom:7vh}
+.day-inner{width:100%}
+
+.kicker{
+  display:flex;align-items:center;gap:12px;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:.8rem;letter-spacing:.3em;text-transform:uppercase;
+  color:var(--coral-deep);margin-bottom:14px;
+}
+.kicker::before{content:"";width:34px;height:2px;background:var(--coral)}
+
+h1,h2{font-family:"ZhaiZaiJia",-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.3;letter-spacing:.02em}
+h1{font-size:clamp(2.2rem,3.4vw,3.2rem);letter-spacing:.02em}
+h2{font-size:clamp(1.6rem,2.4vw,2.2rem)}
+h2 .num{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:.9em;
+  color:var(--coral);margin-right:.35em;
+}
+.sub{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:1.25rem;color:var(--lagoon);margin-top:6px}
+
+p{margin-top:1.1rem;line-height:1.95;font-size:.98rem;color:var(--ink-soft)}
+p b,li b{color:var(--ink)}
+
+.route-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:1.6rem}
+.route-chips span{
+  font-size:.78rem;padding:6px 12px;border-radius:999px;
+  background:#fff;border:1px solid var(--paper-deep);
+  box-shadow:0 2px 6px rgba(7,21,34,.06);
+}
+.route-chips span.arrow{background:none;border:none;box-shadow:none;color:var(--coral);padding:6px 2px}
+
+.tip{
+  margin-top:1.6rem;padding:16px 20px;
+  background:#fff;border-left:4px solid var(--coral);
+  border-radius:0 12px 12px 0;
+  box-shadow:0 4px 16px rgba(7,21,34,.07);
+  font-size:.9rem;line-height:1.85;color:var(--ink-soft);
+}
+.tip .tag{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--coral-deep);
+  font-size:1.05rem;margin-right:6px;
+}
+.tip.gold{border-left-color:var(--gold)}
+.tip.gold .tag{color:#5b8fb9}
+
+/* journal card: washi-taped note for personal entries */
+.journal{
+  margin-top:1.6rem;padding:24px 22px 16px;position:relative;
+  background:#fffdf6;border-radius:6px 16px 6px 16px;
+  box-shadow:0 6px 18px rgba(7,21,34,.09);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:1.18rem;line-height:2;color:var(--ink);
+}
+.journal::before{
+  content:"";position:absolute;top:-10px;left:50%;
+  transform:translateX(-50%) rotate(-2deg);
+  width:92px;height:20px;border-radius:2px;
+  background:rgba(132,184,223,.5);
+  box-shadow:0 1px 3px rgba(7,21,34,.12);
+}
+.journal .j-tag{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:#a34e2f;
+  font-size:1.08rem;margin-right:8px;
+}
+.journal.hint{color:#425760}
+
+.plan{
+  margin-top:1.6rem;padding:18px 22px;border-radius:14px;
+  background:var(--ink);color:#dbe9f4;
+  box-shadow:0 10px 26px rgba(7,21,34,.22);
+}
+.plan h4{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:.8rem;
+  letter-spacing:.28em;color:var(--gold);margin-bottom:10px;
+}
+.plan ul{list-style:none}
+.plan li{padding:7px 0;font-size:.9rem;line-height:1.7;border-bottom:1px dashed rgba(191,232,226,.18)}
+.plan li:last-child{border-bottom:none}
+.plan li b{color:#fff;font-weight:500;margin-right:.4em}
+
+/* photo grid: landscape full-width, portrait 2–3 per row (grouped by JS) */
+.shots{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:2rem}
+.shot{margin:0;grid-column:span 2;position:relative}
+.shot.span3{grid-column:span 3}
+.shot.land{grid-column:1/-1}
+.shot img{display:block;width:100%;height:auto;border-radius:10px;background:var(--foam);box-shadow:0 8px 24px rgba(7,21,34,.12)}
+/* a text block placed between photos takes a full grid row */
+.shots>p,.shots>.tip,.shots>.plan,.shots>.journal{grid-column:1/-1;margin-top:0}
+
+/* cost table */
+.cost{
+  width:100%;margin-top:1.8rem;border-collapse:collapse;
+  background:#fff;border-radius:14px;overflow:hidden;
+  box-shadow:0 8px 24px rgba(7,21,34,.1);
+  font-size:.88rem;
+}
+.cost th{
+  text-align:left;background:var(--ink);color:var(--foam);
+  font-weight:500;padding:11px 14px;letter-spacing:.06em;
+}
+.cost th:nth-child(2),.cost th:nth-child(3),
+.cost td:nth-child(2),.cost td:nth-child(3){text-align:right}
+.cost td{padding:10px 14px;border-bottom:1px solid var(--paper-deep);color:var(--ink-soft)}
+.cost tr:last-child td{border-bottom:none}
+.cost td:first-child{color:var(--ink);font-weight:500}
+.itinerary th,.itinerary td{text-align:left!important;vertical-align:top}
+.itinerary th:first-child,.itinerary td:first-child{white-space:nowrap;width:17%}
+.itinerary th:nth-child(2){width:36%}
+
+.end-sign{
+  margin-top:8vh;text-align:center;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:1.5rem;color:var(--lagoon);
+}
+.end-sign small{display:block;margin-top:8px;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:.78rem;letter-spacing:.3em;color:var(--ink-soft)}
+
+/* hero photo frame */
+.hero-frame{
+  margin-top:2.4rem;position:relative;
+  border-radius:16px;overflow:hidden;
+  box-shadow:0 20px 50px rgba(7,21,34,.25);
+}
+.hero-frame img{width:100%;display:block}
+.hero-frame figcaption{
+  position:absolute;left:0;right:0;bottom:0;
+  padding:34px 20px 14px;color:#fff;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:1.1rem;
+  background:linear-gradient(transparent,rgba(7,51,74,.75));
+}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(34px)}
+
+/* ============ compact window ============ */
+@media (max-width:860px){
+  #journey{display:block}
+  .map-wrap{width:100%;height:46vh}
+  .info{margin-left:0;width:100%;padding-top:0}
+  .map-title{left:16px;top:12px}.map-title .en{font-size:1rem}.map-title .cn{font-size:10px}
+  .sample-link{margin-top:8px;font-size:10px}.sample-link span{font-size:9px}
+  .map-caption{left:16px;bottom:14px;gap:3px}.map-caption strong{font-size:20px}
+  .map-caption .map-eyebrow{display:none}.map-caption small{font-size:8px}
+  .expand-map{right:12px;bottom:12px;font-size:10px;padding:9px 12px}
+  #d2{scroll-margin-top:49vh}
+  .day{min-height:auto;padding:9vh 0}
+  .shot{grid-column:span 3}
+}
+</style>
+</head>
+<body class="">
+
+<div id="journey">
+
+  <!-- ================= MAP ================= -->
+  <div class="map-wrap">
+    <svg class="map" viewBox="0 0 1200 1600" preserveAspectRatio="xMidYMid slice">
+<defs><linearGradient id="ocean" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d9eee7"/><stop offset="1" stop-color="#bce0db"/></linearGradient></defs>
+      <rect width="1200" height="1600" fill="url(#ocean)"></rect>
+
+      <g class="pov">
+        <g class="pan">
+
+          <rect class="ocean-plane ocean-base" x="-2400" y="-2400" width="6000" height="6400" fill="#d2e9e1"/>
+<g class="map-landmarks"></g>
+          <!-- ============ route legs ============ -->
+<g fill="none" stroke-linecap="round" stroke-linejoin="round"><path class="route-leg-under" d="M 900 250 C 930 380, 680 520, 500 632"/><path class="route-leg leg-intl" d="M 900 250 C 930 380, 680 520, 500 632"/><path class="route-leg-under" d="M 500 632 C 510 780, 555 910, 560 1030"/><path class="route-leg leg-main" d="M 500 632 C 510 780, 555 910, 560 1030"/><path class="route-leg-under" d="M 560 1030 C 385 1020, 285 930, 300 800"/><path class="route-leg leg-main" d="M 560 1030 C 385 1020, 285 930, 300 800"/><path class="route-leg-under" d="M 300 800 C 240 545, 620 280, 900 250"/><path class="route-leg leg-intl" d="M 300 800 C 240 545, 620 280, 900 250"/></g>
+
+          <!-- waypoint markers (pop on arrival) -->
+          <g class="markers"></g>
+
+          <!-- vessel -->
+          <g id="vessel">
+            <circle class="halo" r="15" fill="#DF8F68" opacity=".28"></circle>
+            <g id="vessel-scale">
+              <g id="icon-plane">
+                <path d="M24 0 L5 5 L-9 15 L-13 13 L-4 3 L-18 3 L-24 7 L-26 5 L-22 0 L-26 -5 L-24 -7 L-18 -3 L-4 -3 L-13 -13 L-9 -15 L5 -5 Z" fill="#fff6e4" stroke="#173b36" stroke-width="2.2" stroke-linejoin="round"></path>
+                <path d="M2 0 L18 0" stroke="#f05a3e" stroke-width="2.5" stroke-linecap="round"></path>
+              </g>
+              <g id="icon-boat">
+                <path d="M-21 3 L21 3 L16 11 Q0 17 -16 11 Z" fill="#f05a3e" stroke="#fff6e4" stroke-width="2.4" stroke-linejoin="round"></path>
+                <path d="M-7 3 L-5 -8 L9 -8 L12 3 Z" fill="#fff6e4" stroke="#173b36" stroke-width="2" stroke-linejoin="round"></path>
+                <rect x="-1" y="-5" width="6" height="5" rx="1" fill="#5ab9bd"></rect>
+                <path d="M-25 15 Q-18 12 -11 15 M12 15 Q19 12 26 15" fill="none" stroke="#fff6e4" stroke-width="1.8" stroke-linecap="round"></path>
+              </g>
+            </g>
+          </g>
+
+        </g>
+      </g>
+    </svg>
+
+    <svg class="map-label-lines" aria-hidden="true"></svg>
+    <div class="map-label-layer" aria-hidden="true"></div>
+
+    <div class="map-title">
+      <div class="en">YOUR TRIP</div>
+      <div class="cn">示例地图 · 换成你的旅程</div>
+      <nav class="map-nav" aria-label="地图章节"><a href="#d1" aria-current="false">出发</a><a href="#d2" aria-current="false">第 1 站</a><a href="#d3" aria-current="false">第 2 站</a><a href="#d4" aria-current="false">返程</a></nav>
+    </div>
+    <svg class="map-compass" viewBox="0 0 44 44">
+      <circle cx="22" cy="22" r="19" fill="none" stroke="#bfe8e2" stroke-width="1.4" opacity=".8"></circle>
+      <path d="M22 7 L26 22 L22 19 L18 22 Z" fill="#DF8F68"></path>
+      <text x="22" y="38" text-anchor="middle" font-size="9" fill="#bfe8e2" font-family="ui-monospace,Menlo,monospace">N</text>
+    </svg>
+
+    <div class="map-caption"><span class="map-eyebrow">OUR LITTLE JOURNEY</span><strong id="map-chapter">从出发地，去看风景</strong><span id="map-detail">出发地 → 第 1 站</span><small id="trip-dates"></small></div>
+    <button class="expand-map" aria-label="展开完整行程地图" aria-expanded="false">
+      <svg viewBox="0 0 24 24"><path d="m11.39 15.18-4.97 4.97 1.76 1.66c.81.81.24 2.19-.91 2.19H1.28C.57 24 0 23.42 0 22.71v-6a1.28 1.28 0 0 1 2.19-.91l1.66 1.77 4.97-4.97a.86.86 0 0 1 1.21 0l1.36 1.36c.33.33.33.88 0 1.21Zm1.22-6.36 4.97-4.97-1.76-1.66A1.28 1.28 0 0 1 16.73 0h6c.71 0 1.28.58 1.28 1.29v6a1.28 1.28 0 0 1-2.19.91l-1.66-1.77-4.97 4.97a.86.86 0 0 1-1.21 0l-1.36-1.36a.86.86 0 0 1 0-1.21Z"></path></svg>
+      展开全图
+    </button>
+  </div>
+
+  <button class="close-map" aria-label="关闭全图，回到当前行程">
+    <svg viewBox="0 0 24 24"><path d="M20.58.33a1.1 1.1 0 0 1 1.59 0l1.5 1.5c.44.44.44 1.15 0 1.59L19.59 7.5l1.83 1.83a1.13 1.13 0 0 1-.8 1.93h-6.75c-.62 0-1.12-.5-1.12-1.12V3.38a1.12 1.12 0 0 1 1.92-.8l1.83 1.83zM3.37 12.75h6.75c.62 0 1.12.5 1.12 1.12v6.75a1.12 1.12 0 0 1-1.92.8l-1.83-1.83-4.08 4.08c-.44.44-1.15.44-1.59 0l-1.5-1.5a1.1 1.1 0 0 1 0-1.59L4.4 16.5l-1.83-1.83a1.1 1.1 0 0 1-.24-1.23c.17-.42.58-.7 1.04-.7Z"></path></svg>
+  </button>
+
+  <!-- ================= CONTENT ================= -->
+  <div class="info">
+    <section class="day" id="hero"><div class="day-inner">
+      <div class="kicker rv">TRAVEL JOURNAL</div>
+      <h1 class="rv">我的旅行手账</h1>
+      <div class="sub rv">从一段行程，开始记录</div>
+      <p class="rv">这是通用结构示例。地点、天数、交通方式和地图插画将根据你的行程制作。</p>
+      <figure class="hero-frame rv"><img src="assets/photo-placeholder.svg" alt="旅行照片占位图"></figure>
+    </div></section>
+    <section class="day" id="d1"><div class="day-inner">
+      <div class="kicker rv">CHAPTER 01</div>
+      <h2 class="rv"><span class="num">01</span>出发</h2>
+      <div class="sub rv">示例章节 · 按实际行程替换</div>
+      <p class="rv">在这里补充你自己的旅行记录，照片可以之后再添加。</p>
+      <div class="shots"><figure class="shot rv"><img src="assets/photo-placeholder.svg" alt="等待添加旅行照片"></figure></div>
+      <div class="journal rv hint"><span class="j-tag">✎ 我的便签</span>点「编辑」，写下想保留的记录。</div>
+    </div></section>
+    <section class="day" id="d2"><div class="day-inner">
+      <div class="kicker rv">CHAPTER 02</div>
+      <h2 class="rv"><span class="num">02</span>第一段旅程</h2>
+      <div class="sub rv">示例章节 · 按实际行程替换</div>
+      <p class="rv">在这里补充你自己的旅行记录，照片可以之后再添加。</p>
+      <div class="shots"><figure class="shot rv"><img src="assets/photo-placeholder.svg" alt="等待添加旅行照片"></figure></div>
+      <div class="journal rv hint"><span class="j-tag">✎ 我的便签</span>点「编辑」，写下想保留的记录。</div>
+    </div></section>
+    <section class="day" id="d3"><div class="day-inner">
+      <div class="kicker rv">CHAPTER 03</div>
+      <h2 class="rv"><span class="num">03</span>下一站</h2>
+      <div class="sub rv">示例章节 · 按实际行程替换</div>
+      <p class="rv">在这里补充你自己的旅行记录，照片可以之后再添加。</p>
+      <div class="shots"><figure class="shot rv"><img src="assets/photo-placeholder.svg" alt="等待添加旅行照片"></figure></div>
+      <div class="journal rv hint"><span class="j-tag">✎ 我的便签</span>点「编辑」，写下想保留的记录。</div>
+    </div></section>
+    <section class="day" id="d4"><div class="day-inner">
+      <div class="kicker rv">CHAPTER 04</div>
+      <h2 class="rv"><span class="num">04</span>返程</h2>
+      <div class="sub rv">示例章节 · 按实际行程替换</div>
+      <p class="rv">在这里补充你自己的旅行记录，照片可以之后再添加。</p>
+      <div class="shots"><figure class="shot rv"><img src="assets/photo-placeholder.svg" alt="等待添加旅行照片"></figure></div>
+      <div class="journal rv hint"><span class="j-tag">✎ 我的便签</span>点「编辑」，写下想保留的记录。</div>
+    </div></section>
+    <section class="day" id="end"><div class="day-inner">
+      <div class="kicker rv">END OF JOURNEY</div><h2 class="rv">回看这次旅行</h2>
+      <p class="rv">照片和记录可以慢慢补。编辑后记得保存到文件夹。</p>
+      <div class="end-sign rv">我的旅行 · 我的记录<small>TRAVEL JOURNAL</small></div>
+      <p class="template-credit" style="margin-top:36px;font-size:11px;line-height:1.8;color:var(--ink-soft)">手账模板与 Skill 制作：阿蓝蓝<br>地图动画参考：<a href="https://codepen.io/creativeocean/pen/myOVZYO" target="_blank" rel="noopener noreferrer" style="color:inherit">ScrollMap · Tom Miller / Creative Ocean</a><br><a href="licenses/第三方说明.md" style="color:inherit">来源与许可</a></p>
+    </div></section>
+  </div>
+</div>
+
+<style>
+/* ============ svg map internals ============ */
+.ocean-plane,.map-islands{pointer-events:none}
+.island-art{pointer-events:none}
+.ocean-base{fill:#a8d6ce}.ocean-texture{opacity:.43}
+.atoll-label{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:22px;letter-spacing:.35em;fill:#173B43;opacity:.58}
+.isle path{stroke:#173B43;stroke-width:2;stroke-linejoin:round}
+.isl-label{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:24px;fill:#173B43;stroke:#e4f3e9;stroke-width:3;paint-order:stroke;stroke-linejoin:round}
+.isl-label.big{font-size:29px}
+.site-label{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:20px;fill:#335b60;stroke:#e4f3e9;stroke-width:2.5;paint-order:stroke;stroke-linejoin:round}
+.route-leg{stroke:#e66c48;stroke-width:3}
+.leg-intl{stroke:#F05A3E;stroke-width:2.5;stroke-dasharray:10 8}
+.route-leg-under{stroke:#fff7e7;stroke-width:6;opacity:.85}
+.halo{fill:#F05A3E;animation:halo 2.2s ease-out infinite;transform-origin:center;transform-box:fill-box}
+#icon-boat path:first-child{fill:#F05A3E}
+#icon-boat path:last-child{fill:none}
+#icon-boat rect{stroke:#F05A3E}
+.markers circle:not(.pulse){fill:#F05A3E}
+.markers .pulse{fill:none;stroke:#F05A3E;animation:halo 2s ease-out infinite;transform-origin:center;transform-box:fill-box}
+@keyframes halo{0%{transform:scale(.6);opacity:.5}70%{transform:scale(1.7);opacity:0}100%{transform:scale(1.7);opacity:0}}
+
+/* Map visual system: screen-sized labels over one continuous illustrated map. */
+.map-wrap{background:#5ab9bd}
+.ocean-base{fill:#d2e9e1}
+.map-title{left:26px;top:20px;color:#173b36;text-shadow:0 1px 3px #fff6e4aa}
+.map-title .en{font-family:Impact,"Arial Black",sans-serif;font-size:32px;font-weight:900;line-height:1;letter-spacing:.1em}
+.map-title .cn{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:13px;font-weight:700;letter-spacing:.08em;margin-top:7px;opacity:1}
+.map-nav{flex-wrap:wrap;gap:7px;margin-top:15px}
+.map-nav a{font-size:12px;font-weight:700;color:#173b36;padding:6px 10px;border:1px solid #173b3655;background:#fff6e4dd;box-shadow:0 2px 8px #173b361a}
+.map-nav a:hover,.map-nav a[aria-current="true"]{background:#173b36;color:#fff6e4}
+.map-caption{left:26px;bottom:25px;color:#173b36;text-shadow:0 1px 3px #e7f3dc;gap:5px}
+.map-caption .map-eyebrow{font-size:11px;font-weight:700}
+.map-caption strong{font-size:28px;line-height:1.2}
+.map-caption>span:not(.map-eyebrow){font-size:13px;font-weight:600}
+.map-caption small{font-size:11px;opacity:.8}
+.map-label-lines,.map-label-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.map-label-lines{z-index:13;overflow:visible}.map-label-layer{z-index:14}
+.map-label{position:absolute;left:0;top:0;box-sizing:border-box;white-space:nowrap;padding:5px 10px;background:#fff6e4f2;color:#173b36;border:1.5px solid #173b36;border-radius:999px;box-shadow:0 2px 0 #173b3638,0 5px 12px #173b3625;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:14px;font-weight:700;line-height:1.25;letter-spacing:.01em;will-change:transform}
+.map-label.main{font-size:18px;padding:6px 13px;border-width:2px;box-shadow:0 3px 0 #173b3645,0 7px 15px #173b362b}
+.map-label.main::before{content:"";display:inline-block;width:8px;height:8px;margin-right:8px;border-radius:50%;background:#f05a3e;vertical-align:2px}
+.map-label.intl{background:#fff6e4dc}
+@media (max-width:860px){
+  .map-title{left:16px;top:12px}.map-title .en{font-size:25px}.map-title .cn{font-size:11px}
+  .map-caption{left:16px;bottom:14px}.map-caption strong{font-size:22px}.map-caption small{font-size:9px}
+  .map-label{font-size:12px}.map-label.main{font-size:15px}
+}
+</style>
+
+<script>
+window.TRIP_DRAFT_KEY='scroll-map-journal-neutral-v1:'+location.pathname;
+try{const saved=localStorage.getItem(window.TRIP_DRAFT_KEY);if(saved)document.querySelector('.info').innerHTML=saved;}catch(e){}
+</script>
+<script src="vendor/gsap.min.js"></script>
+<script src="vendor/ScrollTrigger.min.js"></script>
+<script>
+gsap.registerPlugin(ScrollTrigger);
+
+/* The saved HTML keeps only this neutral SVG. Art, markers and labels are rebuilt once. */
+window.__tripBaseMapSvg=document.querySelector('svg.map').cloneNode(true);
+const MAP_PLACES=[{"id": "start", "name": "出发地", "kind": "main", "x": 900, "y": 250, "dx": 20, "dy": 15}, {"id": "first", "name": "第 1 站", "kind": "main", "x": 500, "y": 632, "dx": 20, "dy": 15}, {"id": "second", "name": "第 2 站", "kind": "main", "x": 560, "y": 1030, "dx": 20, "dy": 15}, {"id": "third", "name": "第 3 站", "kind": "main", "x": 300, "y": 800, "dx": -110, "dy": 15}];
+const mapLandmarks=document.querySelector('.map-landmarks');
+const flagEntries=MAP_PLACES.filter(place=>!place.art).map(place=>{
+  const flag=document.createElementNS('http://www.w3.org/2000/svg','g');
+  flag.setAttribute('class','map-flag');
+  flag.innerHTML='<ellipse cx="0" cy="3" rx="8" ry="3" fill="#173b3620"/>'+
+    '<path d="M0 0V-38" stroke="#173b36" stroke-width="2.2" stroke-linecap="round"/>'+
+    '<path d="M1 -37H29L21 -28L29 -19H1Z" fill="#df8f68" stroke="#173b36" stroke-width="1.5" stroke-linejoin="round"/>';
+  mapLandmarks.appendChild(flag);return {...place,flag};
+});
+
+MAP_PLACES.filter(place=>place.art).forEach(place=>{
+  const [src,x,y,width,height]=place.art;
+  const image=document.createElementNS('http://www.w3.org/2000/svg','image');
+  Object.entries({href:src,x,y,width,height,preserveAspectRatio:'xMidYMid meet',class:'island-art'})
+    .forEach(([key,value])=>image.setAttribute(key,String(value)));
+  const title=document.createElementNS('http://www.w3.org/2000/svg','title');
+  title.textContent=place.name;image.appendChild(title);mapLandmarks.appendChild(image);
+});
+
+/* ---------- waypoint markers ---------- */
+const SVGNS = 'http://www.w3.org/2000/svg';
+const markersG = document.querySelector('.markers');
+// One arrival per simple route leg.
+const waypoints = [{"x": 500, "y": 632, "leg": 0}, {"x": 560, "y": 1030, "leg": 1}, {"x": 300, "y": 800, "leg": 2}, {"x": 900, "y": 250, "leg": 3}];
+waypoints.forEach(w => {
+  const g = document.createElementNS(SVGNS, 'g');
+  g.setAttribute('transform', `translate(${w.x} ${w.y})`);
+  g.innerHTML = '<circle class="pulse" r="9" fill="none" stroke="#DF8F68" stroke-width="2"/>' +
+                '<circle r="8" fill="#DF8F68" stroke="#fff" stroke-width="3"/>';
+  markersG.appendChild(g);
+  w.el = g;
+});
+
+/* project a point onto a leg → 0..1 fraction along its length */
+function projectFrac(path, x, y){
+  const L = path.getTotalLength();
+  let best = 0, bd = Infinity;
+  for (let i = 0; i <= 240; i++){
+    const p = path.getPointAtLength(L * i / 240);
+    const d = (p.x - x) ** 2 + (p.y - y) ** 2;
+    if (d < bd){ bd = d; best = i / 240; }
+  }
+  return best;
+}
+
+/* ---------- camera: one origin, shared map coordinates ---------- */
+const mapWrap = document.querySelector('.map-wrap');
+const mapSvg = document.querySelector('svg.map');
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const camera = {x:600, y:800, zoom:1, follow:0};
+const routeProgress = {leg:0, progress:0};
+const povG = document.querySelector('.pov');
+const panG = document.querySelector('.pan');
+const vesselG = document.querySelector('#vessel');
+let expanded = false;
+let tl;
+let activeSegment = -1;
+let rootScale = 1;
+const legs = gsap.utils.toArray('.route-leg');
+const unders = gsap.utils.toArray('.route-leg-under');
+// Keep untouched geometry in the live SVG; detached paths can report zero length.
+const geometryGroup=document.createElementNS(SVGNS,'g');
+geometryGroup.setAttribute('visibility','hidden');
+geometryGroup.setAttribute('pointer-events','none');
+panG.appendChild(geometryGroup);
+const geometryPaths=legs.map(path=>{
+  const geometry=path.cloneNode(false);
+  geometry.removeAttribute('class');
+  geometryGroup.appendChild(geometry);
+  return geometry;
+});
+const fullRouteData=geometryPaths.map(path=>path.getAttribute('d'));
+const routeLengths=geometryPaths.map(path=>path.getTotalLength());
+const routeSamples=geometryPaths.map((path,i)=>{
+  const count=Math.ceil(routeLengths[i]/3);
+  return Array.from({length:count+1},(_,n)=>{
+    const distance=n/count*routeLengths[i];
+    const point=path.getPointAtLength(distance);
+    return {distance,x:point.x,y:point.y};
+  });
+});
+function drawRoutes(legIndex,progress,effective,all=false,head=null){
+  legs.forEach((leg,i)=>{
+    const fraction=all || i<legIndex ? 1 : i===legIndex ? progress : 0;
+    const targets=[unders[i],leg];
+    let data=fullRouteData[i];
+    if(fraction>0 && fraction<1){
+      const distance=routeLengths[i]*fraction;
+      const end=head && i===legIndex ? head : geometryPaths[i].getPointAtLength(distance);
+      const points=routeSamples[i].filter(point=>point.distance<distance);
+      data=points.map((p,n)=>`${n?'L':'M'} ${p.x} ${p.y}`).join(' ')+` L ${end.x} ${end.y}`;
+    }
+    targets.forEach(path=>{
+      path.style.visibility=fraction>0?'visible':'hidden';
+      const under=path.classList.contains('route-leg-under');
+      path.style.stroke=under?'#fff7e7':'#e66c48';
+      path.style.opacity=all?'1':i===legIndex?'1':'.25';
+      path.style.strokeDasharray=(!under && (i===0 || i===legs.length-1)) ? `${9/effective} ${7/effective}` : 'none';
+      path.style.strokeDashoffset='0';
+      path.style.strokeWidth=String((under?6:(i===0 || i===legs.length-1 ? 2.5:3.2))/effective);
+      if(path.getAttribute('d')!==data)path.setAttribute('d',data);
+    });
+  });
+}
+
+/* Place names live in a screen-space layer so camera zoom never shrinks the type. */
+const labelLayer=document.querySelector('.map-label-layer');
+const labelLines=document.querySelector('.map-label-lines');
+const labelEntries=MAP_PLACES.map(place=>{
+  const node=document.createElement('span');
+  node.className='map-label '+place.kind;
+  node.textContent=place.name;
+  labelLayer.appendChild(node);
+  const line=document.createElementNS(SVGNS,'line');
+  line.setAttribute('stroke','#173b36');
+  line.setAttribute('stroke-width','1.5');
+  line.setAttribute('opacity','.62');
+  labelLines.appendChild(line);
+  return {...place,node,line};
+});
+function overlapArea(a,b){
+  return Math.max(0,Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x))*
+         Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));
+}
+function renderLabels(){
+  const matrix=panG.getScreenCTM();
+  if(!matrix)return;
+  const effective=Math.hypot(matrix.a,matrix.b);
+  flagEntries.forEach(place=>place.flag.setAttribute('transform',`translate(${place.x} ${place.y}) scale(${1/effective})`));
+  const wrap=mapWrap.getBoundingClientRect();
+  const w=wrap.width,h=wrap.height;
+  labelLines.setAttribute('viewBox',`0 0 ${w} ${h}`);
+  const reserved=['.map-title','.map-caption','.expand-map','.close-map']
+    .map(selector=>document.querySelector(selector))
+    .filter(el=>el && getComputedStyle(el).visibility!=='hidden' && getComputedStyle(el).display!=='none')
+    .map(el=>{
+      const r=el.getBoundingClientRect();
+      return {x:r.left-wrap.left-7,y:r.top-wrap.top-7,w:r.width+14,h:r.height+14};
+    });
+  const occupied=[...reserved];
+  const mainArtRects=MAP_PLACES.map(place=>{
+    const px=matrix.a*place.x+matrix.c*place.y+matrix.e-wrap.left;
+    const py=matrix.b*place.x+matrix.d*place.y+matrix.f-wrap.top;
+    if(place.art){
+      const [,ax,ay,aw,ah]=place.art;
+      return {x:matrix.a*ax+matrix.c*ay+matrix.e-wrap.left,
+        y:matrix.b*ax+matrix.d*ay+matrix.f-wrap.top,
+        w:aw*effective,h:ah*effective};
+    }
+    return {x:px-4,y:py-42,w:38,h:48};
+  });
+  labelEntries.forEach(place=>{
+    const px=matrix.a*place.x+matrix.c*place.y+matrix.e-wrap.left;
+    const py=matrix.b*place.x+matrix.d*place.y+matrix.f-wrap.top;
+    let artVisible=false;
+    let artRect=null;
+    if(place.art){
+      const [,ax,ay,aw,ah]=place.art;
+      const x1=matrix.a*ax+matrix.c*ay+matrix.e-wrap.left;
+      const y1=matrix.b*ax+matrix.d*ay+matrix.f-wrap.top;
+      const x2=matrix.a*(ax+aw)+matrix.c*(ay+ah)+matrix.e-wrap.left;
+      const y2=matrix.b*(ax+aw)+matrix.d*(ay+ah)+matrix.f-wrap.top;
+      artRect={x:Math.min(x1,x2),y:Math.min(y1,y2),w:Math.abs(x2-x1),h:Math.abs(y2-y1)};
+      artVisible=Math.max(x1,x2)>0 && Math.min(x1,x2)<w && Math.max(y1,y2)>0 && Math.min(y1,y2)<h;
+    }
+    if(!artVisible && (px < -65 || px > w+65 || py < -65 || py > h+65)){
+      place.node.style.visibility='hidden';place.line.style.display='none';return;
+    }
+    place.node.style.visibility='visible';
+    const width=place.node.offsetWidth,height=place.node.offsetHeight;
+    const options=[
+      [place.dx,place.dy],[14,-height-15],[-width-14,-height-15],
+      [14,15],[-width-14,15],[-width/2,-height-22],[-width/2,22]
+    ];
+    for(const radius of [45,90,140,190]){
+      options.push([radius,-height/2],[-width-radius,-height/2],[-width/2,radius],[-width/2,-height-radius]);
+    }
+    let best=null,bestScore=Infinity;
+    if(!best)options.forEach(([dx,dy],rank)=>{
+      const x=Math.max(10,Math.min(w-width-10,px+dx));
+      const y=Math.max(10,Math.min(h-height-10,py+dy));
+      const rect={x,y,w:width,h:height};
+      const overlap=occupied.reduce((sum,other)=>sum+overlapArea(rect,other),0);
+      const artOverlap=mainArtRects.reduce((sum,other)=>sum+overlapArea(rect,other),0);
+      const distance=Math.hypot(x+width/2-px,y+height/2-py);
+      const score=overlap*10+artOverlap*1.5+distance*.15+rank*.05;
+      if(score<bestScore){bestScore=score;best=rect;}
+    });
+    occupied.push({...best,x:best.x-3,y:best.y-3,w:best.w+6,h:best.h+6});
+    place.node.style.transform=`translate(${Math.round(best.x)}px,${Math.round(best.y)}px)`;
+    const endX=Math.max(best.x,Math.min(px,best.x+width));
+    const endY=Math.max(best.y,Math.min(py,best.y+height));
+    const length=Math.hypot(endX-px,endY-py);
+    place.line.style.display=length>15?'':'none';
+    place.line.setAttribute('x1',px);place.line.setAttribute('y1',py);
+    place.line.setAttribute('x2',endX);place.line.setAttribute('y2',endY);
+  });
+}
+
+const chapterTitle = document.getElementById('map-chapter');
+const chapterDetail = document.getElementById('map-detail');
+const segments = [
+  {
+    "ids": [
+      "#hero",
+      "#d1"
+    ],
+    "leg": 0,
+    "focus": {
+      "x": 560,
+      "y": 610,
+      "zoom": 1.5,
+      "follow": 0.35
+    },
+    "icon": "plane",
+    "title": "出发",
+    "detail": "出发地 → 第 1 站"
+  },
+  {
+    "ids": [
+      "#d2"
+    ],
+    "leg": 1,
+    "zoom": 1.6,
+    "icon": "boat",
+    "title": "第一段旅程",
+    "detail": "第 1 站 → 第 2 站"
+  },
+  {
+    "ids": [
+      "#d3"
+    ],
+    "leg": 2,
+    "zoom": 1.6,
+    "icon": "boat",
+    "title": "下一站",
+    "detail": "第 2 站 → 第 3 站"
+  },
+  {
+    "ids": [
+      "#d4"
+    ],
+    "leg": 3,
+    "focus": {
+      "x": 600,
+      "y": 590,
+      "zoom": 1.2,
+      "follow": 0.3
+    },
+    "icon": "plane",
+    "title": "返程",
+    "detail": "第 3 站 → 出发地"
+  },
+  {
+    "ids": [
+      "#end"
+    ],
+    "overview": true,
+    "title": "回看这次旅行",
+    "detail": "地点与路线均为示例"
+  }
+];
+
+function fitZoom(width, height, padding=160){
+  return Math.min((mapWrap.clientWidth-90)/width, (mapWrap.clientHeight-padding)/height) / rootScale;
+}
+function renderCamera(){
+  if (expanded) return;
+  const time=tl ? tl.time() : 0;
+  const index=segments.reduce((n,seg,i)=>time>=seg.start ? i : n,0);
+  const seg=segments[index];
+  const displayLeg=seg.leg ?? Math.round(routeProgress.leg);
+  const displayProgress=displayLeg===Math.round(routeProgress.leg)?routeProgress.progress:0;
+  const path=geometryPaths[displayLeg];
+  const length=routeLengths[displayLeg];
+  const distance=displayProgress*length;
+  const point=path.getPointAtLength(distance);
+  const before=path.getPointAtLength(Math.max(0,distance-1));
+  const after=path.getPointAtLength(Math.min(length,distance+1));
+  const angle=Math.atan2(after.y-before.y,after.x-before.x)*180/Math.PI;
+  const vesselX=point.x, vesselY=point.y;
+  vesselG.setAttribute('transform',`translate(${vesselX} ${vesselY}) rotate(${angle})`);
+  const x = camera.x*(1-camera.follow) + vesselX*camera.follow;
+  const y = camera.y*(1-camera.follow) + vesselY*camera.follow;
+  povG.setAttribute('transform',`translate(600 800) scale(${camera.zoom})`);
+  panG.setAttribute('transform',`translate(${-x} ${-y})`);
+  const effective = rootScale*camera.zoom;
+  drawRoutes(displayLeg,displayProgress,effective,!!seg.overview,point);
+  vesselG.style.visibility=seg.overview?'hidden':'visible';
+  waypoints.forEach(w=>{w.el.querySelectorAll('circle').forEach(c=>{c.setAttribute('r',String((c.classList.contains('pulse')?11:7)/effective));c.setAttribute('stroke-width',String(2.4/effective));});});
+  renderLabels();
+  document.querySelector('#vessel-scale').setAttribute('transform',`scale(${1.05/effective})`);
+  vesselG.querySelector('.halo').setAttribute('r',String(17/effective));
+}
+
+
+function updateMapChapter(index,overview=false){
+  // All landmarks stay in one fixed coordinate system throughout the journey.
+  document.querySelectorAll('.map-nav a').forEach(a=>a.setAttribute('aria-current',String(!overview && a.getAttribute('href')===segments[index].ids[0])));
+}
+
+function syncChapterFromContent(){
+  if(expanded)return;
+  const threshold=Math.min(window.innerHeight*.42,360);
+  let current=0;
+  segments.forEach((seg,index)=>{
+    const section=document.querySelector(seg.ids[0]);
+    if(section && section.getBoundingClientRect().top<=threshold)current=index;
+  });
+  if(current===activeSegment)return;
+  activeSegment=current;
+  chapterTitle.textContent=segments[current].title;
+  chapterDetail.textContent=segments[current].detail;
+  updateMapChapter(current);
+}
+
+/* ---------- photo grid: landscape full row, portraits 2–3 per row ---------- */
+function layoutShots(){
+  document.querySelectorAll('.shots').forEach(box=>{
+    let run=[];
+    const flush=()=>{
+      run.forEach(f=>f.classList.toggle('span3',run.length===2));
+      run=[];
+    };
+    /* iterate direct children so a text block placed between photos breaks a portrait run */
+    [...box.children].forEach(f=>{
+      if(!f.classList||!f.classList.contains('shot')){flush();return;}
+      const img=f.querySelector('img');
+      const land=img && img.naturalWidth>0 && img.naturalWidth>=img.naturalHeight;
+      f.classList.toggle('land',!!land);
+      if(land){flush();}else{run.push(f);}
+    });
+    flush();
+  });
+}
+
+function buildTimeline(){
+  if(tl){tl.scrollTrigger.kill();tl.kill();}
+  rootScale=Math.max(mapWrap.clientWidth/1200,mapWrap.clientHeight/1600);
+  povG.setAttribute('transform','translate(600 800)');
+  panG.setAttribute('transform','translate(0 0)');
+  // At scroll position zero, fit the entire illustrated map in the half-screen panel.
+  // The first segment zooms toward the user's first destination while scrolling.
+  gsap.set(camera,{x:600,y:800,zoom:fitZoom(1200,1600,80),follow:0});
+  gsap.set(routeProgress,{leg:0,progress:0});
+  gsap.set('#icon-plane',{autoAlpha:1});
+  gsap.set('#icon-boat',{autoAlpha:0});
+  drawRoutes(0,0,rootScale*camera.zoom);
+  gsap.set(waypoints.map(w=>w.el),{autoAlpha:0,scale:0,transformOrigin:'50% 50%'});
+  activeSegment=-1;
+  const journey=document.getElementById('journey');
+  const scrollDist=journey.offsetHeight-window.innerHeight;
+  const journeyTop=journey.getBoundingClientRect().top+window.scrollY;
+  const lead=window.innerWidth<=860 ? mapWrap.clientHeight+24 : 60;
+  segments.forEach((seg,i)=>{
+    seg.start=i===0 ? 0 : Math.max(0,Math.min(scrollDist,Math.floor(document.querySelector(seg.ids[0]).getBoundingClientRect().top+window.scrollY-journeyTop-lead))); 
+  });
+  tl=gsap.timeline({scrollTrigger:{trigger:journey,start:'top top',end:'bottom bottom',scrub:reducedMotion?true:.65},onUpdate:renderCamera});
+  segments.forEach((seg,index)=>{
+    const start=seg.start;
+    const dur=Math.max(.5,(segments[index+1]?.start ?? scrollDist)-start);
+    if(seg.focus){
+      tl.to(camera,{x:seg.focus.x,y:seg.focus.y,follow:seg.focus.follow ?? 0,zoom:seg.focus.zoom,duration:dur*.8,ease:'sine.inOut'},start);
+    }else if(seg.overview){
+      tl.to(camera,{x:610,y:780,follow:0,zoom:fitZoom(1130,1510),duration:dur*.6,ease:'sine.inOut'},start);
+    }else{
+      tl.to(camera,{follow:1,zoom:seg.zoom,duration:dur*.35,ease:'sine.inOut'},start);
+    }
+    if(seg.icon){
+      tl.set('#icon-plane',{autoAlpha:seg.icon==='plane'?1:0},start);
+      tl.set('#icon-boat',{autoAlpha:seg.icon==='boat'?1:0},start);
+    }
+    if(seg.pause || seg.overview) return;
+    const leg=geometryPaths[seg.leg];
+    const depart=start;
+    const travel=dur;
+    tl.fromTo(routeProgress,{leg:seg.leg,progress:0},{leg:seg.leg,progress:1,duration:travel,ease:'none',immediateRender:false},depart);
+    waypoints.filter(w=>w.leg===seg.leg).forEach(w=>{
+      tl.to(w.el,{autoAlpha:1,scale:1,duration:Math.min(28,dur*.025),ease:'back.out(1.7)'},depart+projectFrac(leg,w.x,w.y)*travel*.98);
+    });
+  });
+  tl.set({}, {},scrollDist);
+  tl.scrollTrigger.refresh();
+  tl.progress(tl.scrollTrigger.progress);
+  renderCamera();
+  syncChapterFromContent();
+}
+
+/* ---------- overview is a camera mode, not a jump in the story ---------- */
+const expandMapBtn=document.querySelector('.expand-map');
+const closeMapBtn=document.querySelector('.close-map');
+function showOverview(){
+  expanded=true;
+  mapWrap.classList.add('is-expanded');
+  document.body.classList.add('map-open');
+  document.body.style.overflow='hidden';
+  mapSvg.setAttribute('preserveAspectRatio','xMidYMid meet');
+  const scale=Math.min(mapWrap.clientWidth/1200,mapWrap.clientHeight/1600);
+  const zoom=Math.min((mapWrap.clientWidth-140)/1150,(mapWrap.clientHeight-160)/1500)/scale;
+  povG.setAttribute('transform',`translate(600 800) scale(${zoom})`);
+  panG.setAttribute('transform','translate(-610 -780)');
+  drawRoutes(legs.length-1,1,scale*zoom,true);
+  updateMapChapter(segments.length-1,true);
+  gsap.set(waypoints.map(w=>w.el),{autoAlpha:1,scale:1});
+  waypoints.forEach(w=>w.el.querySelectorAll('circle').forEach(c=>{
+    c.setAttribute('r',String((c.classList.contains('pulse')?11:7)/(scale*zoom)));
+    c.setAttribute('stroke-width',String(2.4/(scale*zoom)));
+  }));
+  requestAnimationFrame(renderLabels);
+  gsap.set('#vessel',{autoAlpha:0});
+  gsap.set(closeMapBtn,{autoAlpha:1});
+  expandMapBtn.setAttribute('aria-expanded','true');
+  chapterTitle.textContent='示例旅行地图';
+  chapterDetail.textContent='出发地 · 第 1 站 · 第 2 站 · 第 3 站';
+  closeMapBtn.focus();
+}
+function closeOverview(){
+  if(!expanded)return;
+  expanded=false;
+  mapWrap.classList.remove('is-expanded');
+  document.body.classList.remove('map-open');
+  document.body.style.overflow='';
+  mapSvg.setAttribute('preserveAspectRatio','xMidYMid slice');
+  gsap.set(closeMapBtn,{autoAlpha:0});
+  gsap.set('#vessel',{autoAlpha:1});
+  expandMapBtn.setAttribute('aria-expanded','false');
+  buildTimeline();
+  syncChapterFromContent();
+  expandMapBtn.focus({preventScroll:true});
+}
+document.querySelectorAll('.map-nav a').forEach(a=>a.addEventListener('click',()=>{if(expanded)closeOverview();}));
+expandMapBtn.addEventListener('click',showOverview);
+closeMapBtn.addEventListener('click',closeOverview);
+window.addEventListener('keydown',e=>{if(e.key==='Escape')closeOverview();});
+window.addEventListener('scroll',syncChapterFromContent,{passive:true});
+let resizeTimer;
+window.addEventListener('resize',()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(()=>{if(expanded)showOverview();else buildTimeline();},200);
+});
+window.addEventListener('load',()=>{layoutShots();if(!expanded)buildTimeline();});
+if(document.fonts?.ready)document.fonts.ready.then(()=>{if(!expanded)buildTimeline();});
+buildTimeline();
+
+/* ---------- content reveal ---------- */
+gsap.utils.toArray('.rv').forEach(el=>{
+  gsap.to(el,{opacity:1,y:0,duration:reducedMotion?0:.9,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%'}});
+});
+if(reducedMotion){document.querySelectorAll('.halo,.pulse').forEach(el=>el.style.animation='none');}
+
+</script>
+
+<style>
+/* ============ inline editor ============ */
+#editor-bar{position:fixed;right:16px;bottom:16px;z-index:10000;display:flex;gap:8px}
+#editor-bar button{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;letter-spacing:.08em;
+  border:none;border-radius:999px;padding:9px 16px;cursor:pointer;
+  background:#071522;color:#F8F1E5;box-shadow:0 6px 18px rgba(7,21,34,.28);
+}
+#editor-bar button[data-act=toggle]{background:#DF8F68;color:#071522;font-weight:700}
+body.map-open #editor-bar{display:none}
+#editor-hint{position:absolute;right:0;bottom:calc(100% + 10px);width:300px;padding:10px 12px;border-radius:10px;background:#fff6e4;color:#33505f;box-shadow:0 3px 15px #173b3620;font-size:12px;line-height:1.6}
+.hero-frame{position:relative}
+body.editing .ed-text{outline:1.5px dashed rgba(223,143,104,.85);outline-offset:3px;border-radius:2px;cursor:text}
+.shot-tools{position:absolute;top:8px;right:8px;display:none;gap:6px;z-index:6}
+body.editing .shot-tools{display:flex}
+.shot-tools button{border:none;border-radius:8px;padding:5px 10px;font-size:11px;cursor:pointer;background:rgba(7,21,34,.82);color:#fff}
+.shot-tools button[data-op=del]{background:rgba(196,58,40,.92)}
+.add-shot{display:none;grid-column:1/-1;border:1.5px dashed rgba(7,21,34,.35);border-radius:10px;background:none;padding:14px;font-size:13px;color:#33586b;cursor:pointer}
+body.editing .add-shot{display:block}
+.add-journal{display:none;width:100%;margin-top:1.6rem;border:1.5px dashed rgba(7,21,34,.35);border-radius:10px;background:none;padding:14px;font-size:13px;color:#33586b;cursor:pointer}
+body.editing .add-journal{display:block}
+.block-tools{position:absolute;top:-12px;left:0;display:none;gap:4px;z-index:7}
+body.editing .block-tools{display:flex}
+.block-tools button{border:none;border-radius:8px;padding:4px 10px;font-size:13px;line-height:1.2;cursor:pointer;background:rgba(0,109,119,.92);color:#fff;box-shadow:0 2px 8px rgba(7,21,34,.25)}
+.block-tools button[data-op=drag]{cursor:grab}
+.block-tools button[data-op=drag]:active{cursor:grabbing}
+.block-tools button[data-op=del]{background:rgba(196,58,40,.92)}
+.block-tools button:disabled{opacity:.3;cursor:default}
+body.editing .dragging-block{opacity:.45}
+body.editing .drop-before::after,body.editing .drop-after::after{content:"";position:absolute;left:0;right:0;height:4px;background:var(--coral-deep);z-index:8;pointer-events:none;border-radius:4px}
+body.editing .drop-before::after{top:-8px}
+body.editing .drop-after::after{bottom:-8px}
+body.editing .shots>.shot:not(.land).drop-before::after{top:0;bottom:0;left:-8px;right:auto;width:4px;height:auto}
+body.editing .shots>.shot:not(.land).drop-after::after{top:0;bottom:0;left:auto;right:-8px;width:4px;height:auto}
+body.editing .day-inner>p,body.editing .day-inner>.tip,body.editing .day-inner>.plan,
+body.editing .day-inner>.shots,body.editing .day-inner>.route-chips,
+body.editing .day-inner>figure,body.editing .day-inner>table,
+body.editing .shots>p,body.editing .shots>.tip,
+body.editing .add-shot,body.editing .add-journal{position:relative}
+#picker{position:fixed;inset:0;z-index:10002;background:rgba(7,21,34,.6);display:flex;align-items:center;justify-content:center;padding:24px}
+#picker .panel{background:#F8F1E5;border-radius:16px;max-width:760px;width:100%;max-height:82vh;overflow:auto;padding:22px}
+#picker h3{margin:0 0 4px;font-size:1.05rem;color:#071522}
+#picker .hint{font-size:12px;color:#5a6b74;margin-bottom:14px}
+#picker .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+#picker .cell{border:2px solid transparent;border-radius:10px;overflow:hidden;cursor:pointer;padding:0;background:none}
+#picker .cell:hover{border-color:#DF8F68}
+#picker .cell img{width:100%;height:110px;object-fit:cover;display:block}
+#picker .file-btn{margin-bottom:14px;border:none;border-radius:999px;padding:9px 18px;font-size:13px;cursor:pointer;background:#006D77;color:#F8F1E5}
+#picker .close{float:right;border:none;background:none;font-size:22px;cursor:pointer;color:#071522}
+.ed-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:10003;background:#071522;color:#F8F1E5;padding:10px 18px;border-radius:999px;font-size:13px;box-shadow:0 8px 24px rgba(7,21,34,.35)}
+</style>
+<script>
+/* ============ inline editor: edit text, add/replace/remove photos, save ============ */
+(function(){
+  const LS_KEY=window.TRIP_DRAFT_KEY;
+  const info=document.querySelector('.info');
+  if(!info)return;
+  const TEXT_SEL='h1,h2,h3,h4,p,li,td,th,figcaption,.kicker,.sub,.tip,.journal,.end-sign';
+  /* Fallback list when photos/ cannot be listed (e.g. opened via file://).
+     Only user photos; placeholder and map art assets are excluded. */
+  const FALLBACK=[];
+  let editing=false, target=null, picker=null;
+
+  const bar=document.createElement('div');
+  bar.id='editor-bar';
+  bar.innerHTML='<button type="button" data-act="toggle">编辑</button>'+
+    '<button type="button" data-act="save" hidden>保存</button>'+
+    '<button type="button" data-act="reset" hidden>重置</button>'+
+    '<span id="editor-hint" hidden>“完成”只退出编辑；“保存”导出文件后请放回项目文件夹。</span>';
+  document.body.appendChild(bar);
+
+  function toast(msg){
+    document.querySelectorAll('.ed-toast').forEach(t=>t.remove());
+    const t=document.createElement('div');t.className='ed-toast';t.textContent=msg;
+    document.body.appendChild(t);setTimeout(()=>t.remove(),2800);
+  }
+
+  let saveTimer;
+  function autosave(immediate=false){
+    clearTimeout(saveTimer);
+    const write=()=>{try{localStorage.setItem(LS_KEY,info.innerHTML);}catch(e){}};
+    if(immediate)write();
+    else saveTimer=setTimeout(write,400);
+  }
+  info.addEventListener('input',e=>{
+    if(!editing)return;
+    /* 占位框一开始写就去掉提示色 */
+    if(e.target&&e.target.classList&&e.target.classList.contains('journal'))e.target.classList.remove('hint');
+    autosave();
+  });
+  info.addEventListener('paste',e=>{
+    if(!editing)return;
+    e.preventDefault();
+    document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text/plain'));
+  });
+
+  function refreshScroll(){
+    if(typeof buildTimeline==='function')buildTimeline();
+    if(window.ScrollTrigger)ScrollTrigger.refresh();
+  }
+
+  function undecorate(){
+    info.querySelectorAll('[contenteditable]').forEach(el=>el.removeAttribute('contenteditable'));
+    info.querySelectorAll('.ed-text').forEach(el=>el.classList.remove('ed-text'));
+    info.querySelectorAll('.shot-tools,.add-shot,.add-journal,.block-tools').forEach(el=>el.remove());
+    info.querySelectorAll('.dragging-block,.drop-before,.drop-after').forEach(el=>el.classList.remove('dragging-block','drop-before','drop-after'));
+  }
+  /* Movable blocks: direct children of a chapter's .day-inner. The chapter header
+     (kicker / h1|h2 / sub) is not in this list, so blocks can never move above the
+     title, and moves are always scoped to the block's own chapter.
+     Text blocks (p / .tip) can additionally move INTO a .shots grid and weave
+     between individual photos; other blocks only swap as whole units. */
+  const BLOCK_SEL='p,.tip,.journal,.plan,.shots,.route-chips,figure,table,.end-sign';
+  const TEXT_BLOCK_SEL='p,.tip,.journal';
+  function movableBlocks(inner){
+    return [...inner.children].filter(el=>el.matches(BLOCK_SEL));
+  }
+  /* sibling inside a .shots box that a text block can hop over (photo or another text block) */
+  function boxSibling(block,dir){
+    const s=dir<0?block.previousElementSibling:block.nextElementSibling;
+    return s && (s.matches('.shot')||s.matches(TEXT_BLOCK_SEL)) ? s : null;
+  }
+  function canMove(block,dir){
+    const box=block.parentElement;
+    if(box.classList.contains('shots')){
+      if(boxSibling(block,dir))return true;
+      return true; /* no more photos on this side → step out of the grid */
+    }
+    const blocks=movableBlocks(box); /* box === .day-inner here */
+    const j=blocks.indexOf(block)+dir;
+    if(j<0||j>=blocks.length)return false;
+    const other=blocks[j];
+    if(other.classList.contains('shots'))return block.matches(TEXT_BLOCK_SEL);
+    return true;
+  }
+  function refreshMoveButtons(inner){
+    inner.querySelectorAll('.block-tools').forEach(t=>{
+      const block=t.parentElement;
+      t.querySelector('[data-op=up]').disabled=!canMove(block,-1);
+      t.querySelector('[data-op=down]').disabled=!canMove(block,1);
+    });
+  }
+  function moveBlock(block,dir){
+    const inner=block.closest('.day-inner');
+    const box=block.parentElement;
+    if(box.classList.contains('shots')){
+      const sib=boxSibling(block,dir);
+      if(sib){
+        if(dir<0)box.insertBefore(block,sib);
+        else box.insertBefore(block,sib.nextElementSibling);
+      }else if(dir<0){
+        box.parentElement.insertBefore(block,box); /* step out above the grid */
+      }else{
+        box.parentElement.insertBefore(block,box.nextElementSibling); /* step out below */
+      }
+    }else{
+      const blocks=movableBlocks(inner);
+      const other=blocks[blocks.indexOf(block)+dir];
+      if(!other)return;
+      if(other.classList.contains('shots')){
+        if(!block.matches(TEXT_BLOCK_SEL))return;
+        if(dir<0){
+          const addBtn=other.querySelector(':scope > .add-shot');
+          other.insertBefore(block,addBtn||null); /* enter at the end of the grid */
+        }else{
+          other.insertBefore(block,other.firstElementChild); /* enter at the start */
+        }
+      }else if(dir<0){
+        inner.insertBefore(block,other);
+      }else{
+        inner.insertBefore(other,block);
+      }
+    }
+    if(typeof layoutShots==='function')layoutShots();
+    refreshMoveButtons(inner);
+    refreshScroll();
+    autosave();
+  }
+  let draggedBlock=null,dropTarget=null;
+  function clearDrop(){
+    dropTarget?.classList.remove('drop-before','drop-after');
+    dropTarget=null;
+  }
+  function dragTarget(node){
+    for(let el=node;el&&el!==info;el=el.parentElement){
+      const parent=el.parentElement;
+      if(parent?.classList.contains('day-inner')&&el.matches(BLOCK_SEL))return el;
+      if(parent?.classList.contains('day-inner')&&el.classList.contains('add-journal'))return el;
+      if(parent?.classList.contains('shots')&&(el.matches(TEXT_BLOCK_SEL)||el.classList.contains('shot')))return el;
+      if(parent?.classList.contains('shots')&&el.classList.contains('add-shot'))return el;
+    }
+    return null;
+  }
+  function validDrop(target){
+    if(!draggedBlock||!target||target===draggedBlock)return false;
+    if(target.closest('.day-inner')!==draggedBlock.closest('.day-inner'))return false;
+    if(target.parentElement.classList.contains('shots')&&!draggedBlock.matches(TEXT_BLOCK_SEL))return false;
+    if(draggedBlock.contains(target))return false;
+    return true;
+  }
+  function dropSide(e,target){
+    if(target.matches('.add-journal,.add-shot'))return 'before';
+    const r=target.getBoundingClientRect();
+    const horizontal=target.classList.contains('shot')&&r.width<target.parentElement.getBoundingClientRect().width*.8;
+    return (horizontal?e.clientX<r.left+r.width/2:e.clientY<r.top+r.height/2)?'before':'after';
+  }
+  info.addEventListener('dragover',e=>{
+    if(!draggedBlock)return;
+    e.preventDefault();
+    const target=dragTarget(e.target);
+    if(!validDrop(target)){clearDrop();return;}
+    e.dataTransfer.dropEffect='move';
+    const side=dropSide(e,target);
+    if(dropTarget!==target)clearDrop();
+    target.classList.remove('drop-before','drop-after');
+    target.classList.add('drop-'+side);
+    dropTarget=target;
+  });
+  info.addEventListener('drop',e=>{
+    if(!draggedBlock)return;
+    e.preventDefault();
+    const target=dragTarget(e.target);
+    if(!validDrop(target))return;
+    const side=dropSide(e,target);
+    if(side==='before')target.before(draggedBlock);
+    else target.after(draggedBlock);
+    clearDrop();
+    draggedBlock.classList.remove('dragging-block');
+    draggedBlock=null;
+    layoutShots();
+    refreshMoveButtons(target.closest('.day-inner'));
+    refreshScroll();
+    autosave();
+  });
+  function decorate(){
+    undecorate(); /* drop stale artifacts restored from a draft before re-binding */
+    info.querySelectorAll(TEXT_SEL).forEach(el=>{el.setAttribute('contenteditable','true');el.classList.add('ed-text');});
+    info.querySelectorAll('.shots').forEach(box=>{
+      const b=document.createElement('button');
+      b.type='button';b.className='add-shot';b.textContent='＋ 添加图片';
+      b.addEventListener('click',()=>openPicker({mode:'add',box}));
+      box.appendChild(b);
+    });
+    info.querySelectorAll('.shot,.hero-frame').forEach(fig=>{
+      const t=document.createElement('div');t.className='shot-tools';
+      t.innerHTML='<button type="button" data-op="replace">替换</button><button type="button" data-op="del">删除</button>';
+      t.querySelector('[data-op=replace]').addEventListener('click',()=>openPicker({mode:'replace',fig}));
+      const del=t.querySelector('[data-op=del]');
+      if(fig.classList.contains('hero-frame'))del.remove();
+      else del.addEventListener('click',()=>{fig.remove();layoutShots();refreshScroll();autosave();});
+      fig.appendChild(t);
+    });
+    info.querySelectorAll('.day-inner').forEach(inner=>{
+      /* chapter-level blocks + text blocks already sitting inside a photo grid */
+      const targets=[...movableBlocks(inner),
+        ...inner.querySelectorAll('.shots > p, .shots > .tip, .shots > .journal')];
+      targets.forEach(block=>{
+        const t=document.createElement('div');
+        t.className='block-tools';
+        t.contentEditable='false';
+        t.innerHTML='<button type="button" data-op="drag" draggable="true" aria-label="拖动排序" title="按住拖动排序">⠿</button><button type="button" data-op="up" title="上移（到图片组边缘可插入图片中间）">↑</button><button type="button" data-op="down" title="下移（到图片组边缘可插入图片中间）">↓</button>';
+        t.querySelector('[data-op=drag]').addEventListener('dragstart',e=>{
+          draggedBlock=block;
+          e.dataTransfer.effectAllowed='move';
+          e.dataTransfer.setData('text/plain','trip-block');
+          block.classList.add('dragging-block');
+        });
+        t.querySelector('[data-op=drag]').addEventListener('dragend',()=>{
+          block.classList.remove('dragging-block');
+          draggedBlock=null;
+          clearDrop();
+        });
+        t.querySelector('[data-op=up]').addEventListener('click',()=>moveBlock(block,-1));
+        t.querySelector('[data-op=down]').addEventListener('click',()=>moveBlock(block,1));
+        if(block.matches('p,.tip,.journal,.plan')){
+          const del=document.createElement('button');
+          del.type='button';del.dataset.op='del';del.title='删除这块内容';del.textContent='删除';
+          del.addEventListener('click',()=>{
+            if(!confirm('确定删除这块内容吗？'))return;
+            block.remove();
+            layoutShots();
+            refreshMoveButtons(inner);
+            refreshScroll();
+            autosave(true);
+          });
+          t.appendChild(del);
+        }
+        block.appendChild(t);
+      });
+      const addJournal=document.createElement('button');
+      addJournal.type='button';addJournal.className='add-journal';addJournal.textContent='＋ 添加便签';
+      addJournal.addEventListener('click',()=>{
+        const journal=document.createElement('div');
+        journal.className='journal hint';
+        const tag=document.createElement('span');
+        tag.className='j-tag';tag.textContent='✎ 新便签';
+        journal.append(tag,document.createTextNode('在这里写下想记住的事……'));
+        inner.insertBefore(journal,addJournal);
+        decorate();
+        refreshScroll();
+        autosave();
+        journal.focus();
+      });
+      inner.appendChild(addJournal);
+      refreshMoveButtons(inner);
+    });
+  }
+  function setEditing(on){
+    editing=on;
+    document.body.classList.toggle('editing',on);
+    bar.querySelector('[data-act=toggle]').textContent=on?'完成':'编辑';
+    bar.querySelector('[data-act=save]').hidden=!on;
+    bar.querySelector('[data-act=reset]').hidden=!on;
+    bar.querySelector('#editor-hint').hidden=!on;
+    if(on)decorate();else{undecorate();autosave();}
+  }
+
+  function galleryPath(value){
+    if(typeof value!=='string')return null;
+    let file;
+    try{file=decodeURIComponent(value.replace(/^\.\//,''));}catch(_){return null;}
+    if(!file.startsWith('photos/'))return null;
+    const name=file.slice(7);
+    if(!name || /[\/\\]/.test(name) || name.startsWith('.') || !/\.(jpe?g|png|webp|gif|avif|svg)$/i.test(name))return null;
+    if(/^(map-|placeholder(?:[-_.]|$)|photo-placeholder|sample-(?:sea|island|note)\.svg$)/i.test(name))return null;
+    return 'photos/'+encodeURIComponent(name);
+  }
+  async function photoList(){
+    // Recompute each time: newly selected/referenced photos must survive reopening the picker.
+    const sources=FALLBACK.map(name=>'photos/'+encodeURIComponent(name));
+    info.querySelectorAll('img').forEach(img=>sources.push(img.getAttribute('src')||''));
+    if(location.protocol!=='file:'){
+      try{
+        const response=await fetch('photos/');
+        if(response.ok){
+          const doc=new DOMParser().parseFromString(await response.text(),'text/html');
+          doc.querySelectorAll('a').forEach(a=>{
+            const href=a.getAttribute('href')||'';
+            if(!href.endsWith('/'))sources.push('photos/'+href.split('/').pop());
+          });
+        }
+      }catch(_){}
+    }
+    return [...new Set(sources.map(galleryPath).filter(Boolean))];
+  }
+  async function openPicker(t){
+    target=t;
+    if(!picker){
+      picker=document.createElement('div');picker.id='picker';
+      picker.innerHTML='<div class="panel"><button type="button" class="close">×</button>'+
+        '<h3>选择图片</h3><div class="hint">这里显示已登记的旅行照片，不显示占位图和地图插画。新照片先复制到 photos/，再点「从电脑选择照片」。直接双击打开时，网页不能自动扫描文件夹。照片文件需一直保留。</div>'+
+        '<button type="button" class="file-btn">从电脑选择照片…</button>'+
+        '<input type="file" accept="image/*" multiple hidden>'+
+        '<div class="grid"></div></div>';
+      picker.querySelector('.close').addEventListener('click',closePicker);
+      picker.addEventListener('click',e=>{if(e.target===picker)closePicker();});
+      const fileInput=picker.querySelector('input[type=file]');
+      picker.querySelector('.file-btn').addEventListener('click',()=>fileInput.click());
+      fileInput.addEventListener('change',()=>{if(fileInput.files.length)pickFiles(fileInput.files);fileInput.value='';});
+    }
+    const grid=picker.querySelector('.grid');
+    grid.innerHTML='';
+    document.body.appendChild(picker);
+    const photos=await photoList();
+    if(!photos.length){
+      const empty=document.createElement('p');empty.className='empty-photos';
+      empty.style.cssText='grid-column:1/-1;color:#33505f;padding:20px 0;line-height:1.7';
+      empty.textContent='还没有旅行照片。先将照片复制到 photos/，再从电脑选择；也可以关闭窗口，稍后再添加。';
+      grid.appendChild(empty);
+    }
+    photos.forEach(src=>{
+      const c=document.createElement('button');c.type='button';c.className='cell';
+      const img=new Image();img.src=src;img.loading='lazy';img.alt='';
+      c.appendChild(img);
+      c.addEventListener('click',()=>pick(src));
+      grid.appendChild(c);
+    });
+  }
+  function closePicker(){if(picker&&picker.parentNode)picker.parentNode.removeChild(picker);}
+  function addShotFigure(box,src){
+    const fig=document.createElement('figure');fig.className='shot rv';
+    const img=new Image();img.alt='旅行照片';
+    img.onload=()=>{layoutShots();refreshScroll();};
+    img.src=src;
+    fig.appendChild(img);
+    box.insertBefore(fig,box.querySelector('.add-shot'));
+    /* 新图带 rv 需要立即绑定出场动画，否则编辑会话中保持隐藏 */
+    if(window.gsap&&window.ScrollTrigger){
+      gsap.to(fig,{opacity:1,y:0,duration:typeof reducedMotion!=='undefined'&&reducedMotion?0:.9,ease:'power3.out',scrollTrigger:{trigger:fig,start:'top 88%'}});
+    }else{fig.style.opacity='1';fig.style.transform='none';}
+  }
+  function pick(src){
+    if(!target)return;
+    if(target.mode==='replace'){
+      const img=target.fig.querySelector('img');
+      img.onload=()=>{layoutShots();refreshScroll();};
+      img.src=src;img.alt='旅行照片';
+    }else{
+      addShotFigure(target.box,src);
+      if(editing)decorate();
+    }
+    closePicker();autosave();
+  }
+  function pickFiles(files){
+    if(!target)return;
+    const srcs=[...files].map(f=>'photos/'+encodeURIComponent(f.name));
+    if(target.mode==='replace'){
+      const img=target.fig.querySelector('img');
+      img.onload=()=>{layoutShots();refreshScroll();};
+      img.src=srcs[0];img.alt='旅行照片';
+    }else{
+      srcs.forEach(src=>addShotFigure(target.box,src));
+      if(editing)decorate();
+    }
+    closePicker();autosave();
+    toast('已引用 '+srcs.length+' 张照片——请确认文件已放进 photos/ 文件夹');
+  }
+
+  function snapshot(){
+    const root=document.documentElement.cloneNode(true);
+    root.querySelector('body').classList.remove('editing','map-open');
+    root.querySelector('body').style.removeProperty('overflow');
+    const savedMap=root.querySelector('svg.map');
+    if(savedMap && window.__tripBaseMapSvg)savedMap.replaceWith(window.__tripBaseMapSvg.cloneNode(true));
+    root.querySelector('.map-wrap')?.classList.remove('is-expanded');
+    root.querySelector('.map-wrap')?.removeAttribute('style');
+    root.querySelector('.map-label-layer')?.replaceChildren();
+    root.querySelector('.map-label-lines')?.replaceChildren();
+    root.querySelectorAll('.map-nav a').forEach(link=>link.setAttribute('aria-current','false'));
+    const savedTitle=root.querySelector('#map-chapter');
+    const savedDetail=root.querySelector('#map-detail');
+    if(savedTitle)savedTitle.textContent='从出发地，去看风景';
+    if(savedDetail)savedDetail.textContent='出发地 → 第 1 站';
+    root.querySelector('.close-map')?.removeAttribute('style');
+    root.querySelector('.expand-map')?.setAttribute('aria-expanded','false');
+    root.querySelectorAll('[contenteditable]').forEach(el=>el.removeAttribute('contenteditable'));
+    root.querySelectorAll('.ed-text').forEach(el=>el.classList.remove('ed-text'));
+    root.querySelectorAll('.shot-tools,.add-shot,.add-journal,.block-tools,#picker,.ed-toast').forEach(el=>el.remove());
+    root.querySelectorAll('.dragging-block,.drop-before,.drop-after').forEach(el=>el.classList.remove('dragging-block','drop-before','drop-after'));
+    /* contenteditable 里回车会产生无类 div 碎片和空段落，导出时自动修复为正常段落 */
+    root.querySelectorAll('.day-inner div:not([class]),.day-inner div[class=""],.shots div:not([class]),.shots div[class=""]').forEach(d=>{
+      if(!d.textContent.trim()&&!d.querySelector('img,figure')){d.remove();return;}
+      const p=document.createElement('p');p.className='rv';p.innerHTML=d.innerHTML;d.replaceWith(p);
+    });
+    root.querySelectorAll('.day-inner p,.shots p').forEach(p=>{
+      if(!p.textContent.trim()&&!p.querySelector('img,figure'))p.remove();
+    });
+    const bar2=root.querySelector('#editor-bar');
+    if(bar2)bar2.remove(); /* 运行时脚本会重新创建；静态残留会挡住真按钮 */
+    return '<!DOCTYPE html>\n'+root.outerHTML;
+  }
+  async function saveHTML(){
+    const html=snapshot();
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));
+    a.download='index.html';a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    toast('已导出 index.html，请移回原项目文件夹并保留 photos、assets、map-art、fonts、vendor');
+  }
+
+  bar.addEventListener('click',e=>{
+    const act=e.target.dataset&&e.target.dataset.act;
+    if(act==='toggle')setEditing(!editing);
+    else if(act==='save')saveHTML();
+    else if(act==='reset'){
+      if(confirm('放弃所有未保存的修改，恢复成文件原始内容？')){
+        try{localStorage.removeItem(LS_KEY);}catch(_){}
+        location.reload();
+      }
+    }
+  });
+
+  undecorate(); /* clean artifacts if a draft was restored */
+})();
+</script>
+</body></html>
